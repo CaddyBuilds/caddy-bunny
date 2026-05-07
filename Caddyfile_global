@@ -4,8 +4,8 @@
 # domain name.
 
 {
-  # Set the ACME DNS challenge provider to use Cloudflare for all sites
-  acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+  # Set the ACME DNS challenge provider to use Bunny for all sites
+  acme_dns bunny {env.BUNNY_API_KEY}
 }
 
 example.com {

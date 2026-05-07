@@ -158,8 +158,8 @@ jobs:
           docker pull "${IMAGE}"
           echo "Checking caddy version..."
           docker run --rm "${IMAGE}" caddy version
-          echo "Checking cloudflare module is loaded..."
-          docker run --rm "${IMAGE}" caddy list-modules | grep -q "dns.providers.cloudflare"
+          echo "Checking bunny module is loaded..."
+          docker run --rm "${IMAGE}" caddy list-modules | grep -q "dns.providers.bunny"
           echo "Build verification passed."
 
       - name: Create GitHub Release

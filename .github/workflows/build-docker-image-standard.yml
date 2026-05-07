@@ -19,8 +19,8 @@ jobs:
     with:
       caddy_version: ${{ github.event.inputs.build_version || github.event.client_payload.caddy_version }}
       dockerfile: Dockerfile
-      image_title: Caddy Cloudflare
-      image_description: Caddy with Cloudflare DNS module
+      image_title: Caddy Bunny
+      image_description: Caddy with Bunny DNS module
       flavor_latest: "auto"
       create_release: true
       build_reason: ${{ github.event.client_payload.build_reason || 'manual' }}

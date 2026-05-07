@@ -21,8 +21,8 @@ jobs:
       dockerfile: Dockerfile.alpine
       tag_suffix: "-alpine"
       static_tag: "alpine"
-      image_title: Caddy Cloudflare Alpine
-      image_description: Caddy with Cloudflare DNS module (Alpine)
+      image_title: Caddy Bunny Alpine
+      image_description: Caddy with Bunny DNS module (Alpine)
       flavor_latest: "false"
       create_release: false
       build_reason: ${{ github.event.client_payload.build_reason || 'manual' }}

@@ -20,7 +20,7 @@ example.com {
     encode gzip
 
     tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+        dns bunny {env.BUNNY_API_KEY}
     }
 }
 
@@ -30,6 +30,6 @@ another-example.com {
     encode gzip
 
     tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+        dns bunny {env.BUNNY_API_KEY}
     }
 }

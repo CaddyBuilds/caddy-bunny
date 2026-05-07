@@ -5,7 +5,7 @@ from pathlib import Path
 GITHUB_REPO = "caddyserver/caddy"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
-# Derive image names from GITHUB_REPOSITORY (e.g. "CaddyBuilds/caddy-cloudflare")
+# Derive image names from GITHUB_REPOSITORY (e.g. "CaddyBuilds/caddy-bunny")
 # This makes the script work for any fork without configuration.
 _github_repository = os.environ.get("GITHUB_REPOSITORY", "").lower()
 
@@ -27,9 +27,7 @@ REQUIRED_PLATFORMS = {
 
 # Modules built into the Docker image — must match Dockerfile
 MODULES = [
-    {"module": "github.com/caddy-dns/cloudflare", "repo": "caddy-dns/cloudflare"},
-    {"module": "github.com/WeidiDeng/caddy-cloudflare-ip", "repo": "WeidiDeng/caddy-cloudflare-ip"},
-    {"module": "github.com/fvbommel/caddy-combine-ip-ranges", "repo": "fvbommel/caddy-combine-ip-ranges"},
+    {"module": "github.com/caddy-dns/bunny", "repo": "caddy-dns/bunny"},
 ]
 
 # Path to module version tracking file (repo root)
