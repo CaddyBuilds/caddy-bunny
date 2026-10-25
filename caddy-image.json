@@ -1,0 +1,8 @@
+{
+  "title": "Caddy Bunny",
+  "description": "Caddy with Bunny DNS module",
+  "verify_module": "dns.providers.bunny",
+  "alpine_alias": true,
+  "slim": false,
+  "create_release": true
+}
