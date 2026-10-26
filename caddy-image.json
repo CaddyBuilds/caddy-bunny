@@ -3,6 +3,6 @@
   "description": "Caddy with Bunny DNS module",
   "verify_module": "dns.providers.bunny",
   "alpine_alias": true,
-  "slim": false,
+  "slim": true,
   "create_release": true
 }
