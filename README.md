@@ -1,282 +1,306 @@
-
 # Caddy Bunny
+
+[![Build](https://github.com/caddybuilds/caddy-bunny/actions/workflows/check-caddy-release.yml/badge.svg)](https://github.com/caddybuilds/caddy-bunny/actions/workflows/check-caddy-release.yml)
+[![License: MIT](https://img.shields.io/github/license/caddybuilds/caddy-bunny)](LICENSE)
+
 > A fully integrated Caddy Docker image featuring Bunny DNS-01 ACME validation
 
-Deploy a hassle-free Caddy server with built-in support for Bunny DNS-01 ACME challenges. Streamline your SSL certificate management and ensure your server stays secure without manual updates, making it an effortless and reliable solution.
-
+Automated, multi-platform Docker builds of [Caddy](https://caddyserver.com/) with the [Bunny.net](https://bunny.net/) DNS module baked in.
 
 ## Table of Contents
 
 - [Features](#features)
+- [Quick Start](#quick-start)
+- [Included Modules](#included-modules)
 - [Usage](#usage)
-  - [Using the Pre-built Docker Image](#using-the-pre-built-docker-image)
-  - [Building Your Own Docker Image](#building-your-own-docker-image)
-  - [Sample Caddyfile](#sample-caddyfile)
+  - [Docker Pull](#docker-pull)
+  - [Caddyfile Examples](#caddyfile-examples)
+    - [Global DNS Configuration](#global-dns-configuration)
+    - [Per-Site DNS Configuration](#per-site-dns-configuration)
 - [Configuration](#configuration)
-  - [ACME DNS Challenge Configuration](#acme-dns-challenge-configuration)
-  - [Managing your Bunny API key](#managing-your-bunny-api-key)
-- [Platform Support](#platform-support)
-  - [Raspberry Pi](#raspberry-pi-support)
+  - [Getting a Bunny API Key](#getting-a-bunny-api-key)
+  - [ACME DNS Challenge](#acme-dns-challenge)
 - [Tags](#tags)
+  - [Default or slim?](#default-or-slim)
+  - [Why `alpine` tags point to the same image](#why-alpine-tags-point-to-the-same-image)
+  - [Why did a digest change?](#why-did-a-digest-change)
+- [Platform Support](#platform-support)
+  - [Alpine](#alpine)
+  - [Raspberry Pi](#raspberry-pi)
+- [Troubleshooting](#troubleshooting)
+  - [Debug Logging](#debug-logging)
+  - [Verifying Modules](#verifying-modules)
+  - [Official Resources](#official-resources)
+- [How It Works](#how-it-works)
+- [Building Your Own Image](#building-your-own-image)
+  - [Prerequisites](#prerequisites)
+  - [Setup Instructions](#setup-instructions)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
 
-- **Automated Builds**: Automatically checks for new Caddy releases and builds Docker images.
-- **Continuous Integration**: Utilizes GitHub Actions for seamless CI/CD.
-- **Bunny DNS Integration**: Integrates Bunny DNS for automatic SSL certificate management.
-- **Multi-Platform Support**: Builds images for multiple architectures, including `amd64`, `arm64`, `arm/v7` (Raspberry Pi), `ppc64le`, and `s390x` , ensuring compatibility across a wide range of devices and systems.
-- **Module Update Detection**: Rebuilds when the Bunny DNS module gets new commits, not only on Caddy releases.
-- **Base Image Tracking**: Rebuilds when the official Caddy image is republished for base OS or Go fixes.
-- **Fork-Friendly**: Image names are derived from your GitHub repository; edit one line in the Dockerfile to change the modules.
-- **Manual Trigger**: Allows manual triggering of the build process.
-- **Open Source**: Contributions are welcome under the MIT License.
+- **Automated Builds** -- Daily checks for new Caddy releases with automatic image builds.
+- **Module Update Detection** -- Tracks upstream module commits and rebuilds when they change.
+- **Base Image Tracking** -- Rebuilds when the base image is republished with OS or Go toolchain fixes.
+- **Bunny DNS-01 Integration** -- Automatic SSL certificate management via DNS challenges.
+- **Multi-Platform** -- Supports `amd64`, `arm64`, `arm/v7` (Raspberry Pi), `ppc64le`, and `s390x`.
+- **Alpine-Based** -- Built on the official Caddy image, which uses Alpine Linux. A `slim` variant drops the stock binary.
+- **Fork-Friendly** -- Image names derived automatically from your GitHub repository.
+
+## Quick Start
+
+Pull the image and set up a `docker-compose.yml`:
+
+```yaml
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-bunny:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - $PWD/Caddyfile:/etc/caddy/Caddyfile
+      - $PWD/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - BUNNY_API_KEY=your_bunny_api_key
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
+```
+
+> Defining the data volume as [external](https://docs.docker.com/compose/compose-file/compose-file-v3/#external) ensures `docker-compose down` does not delete it. Create it manually with `docker volume create caddy_data`.
+
+Replace `your_bunny_api_key` with your Bunny.net API key. See [Getting a Bunny API Key](#getting-a-bunny-api-key) for where to find it, and [Caddyfile Examples](#caddyfile-examples) for configuration samples.
+
+## Included Modules
+
+This module is compiled into Caddy at build time using [xcaddy](https://github.com/caddyserver/xcaddy). No additional installation is needed.
+
+| Module | Purpose | Repository |
+|--------|---------|------------|
+| `caddy-dns/bunny` | DNS-01 ACME challenge provider for Bunny.net | [caddy-dns/bunny](https://github.com/caddy-dns/bunny) |
 
 ## Usage
 
-### Using the Pre-built Docker Image
-
-To use the pre-built Docker image, pull it from the GitHub Container Registry:
+### Docker Pull
 
 ```sh
 docker pull ghcr.io/caddybuilds/caddy-bunny:latest
 docker pull caddybuilds/caddy-bunny:latest
-# alpine
-docker pull ghcr.io/caddybuilds/caddy-bunny:alpine
-docker pull caddybuilds/caddy-bunny:alpine
+# slim
+docker pull ghcr.io/caddybuilds/caddy-bunny:slim
+docker pull caddybuilds/caddy-bunny:slim
 ```
-You can use the image in your Docker setup. Here is an example `docker-compose.yml` file:
-```yaml
-services:
-  caddy:
-    image: ghcr.io/caddybuilds/caddy-bunny:latest
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - $PWD/Caddyfile:/etc/caddy/Caddyfile
-      - $PWD/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - BUNNY_API_KEY=your_bunny_api_key
 
-volumes:
-  caddy_data:
-    external: true
-  caddy_config:
-```
-Defining the data volume as [external](https://docs.docker.com/compose/compose-file/compose-file-v3/#external) makes sure `docker-compose down` does not delete the volume. You may need to create it manually using `docker volume create caddy_data`.
+See [Quick Start](#quick-start) for a full docker-compose setup and [Tags](#tags) for every tag.
 
-Replace `your_bunny_api_key` with your actual Bunny API key.
+### Caddyfile Examples
 
-## Sample Caddyfile
-Here is a sample Caddyfile configuration to get you started. This configuration sets up the ACME DNS challenge provider to use Bunny and serves a simple static site.
+#### Global DNS Configuration
 
-### [Global Configuration (Use DNS Challenge for All Sites)](./Caddyfile_global)
-In this configuration, the ACME DNS challenge provider is set globally, so it applies to all sites served by Caddy.
+Set the ACME DNS challenge provider globally so it applies to all sites:
 
-### [Per-site Configuration](./Caddyfile_per_site)
-
-## Configuration
-### Managing your Bunny API key
-
-Your Bunny account already has an API key generated. Follow these steps to retrieve it and use it in your Caddy setup.
-
-1. **Follow Bunny's docs to retrieve your API key**:
-   - [https://docs.bunny.net/account/api-keys](https://docs.bunny.net/account/api-keys)
-
-2. **Set the Environment Variable**:
-   - In your deployment environment, set the environment variable `BUNNY_API_KEY` to the value of the API key
-
-For example, in a Docker environment, you can set this environment variable in your `docker-compose.yml` file:
-
-```yaml
-services:
-  caddy:
-    image: ghcr.io/caddybuilds/caddy-bunny:latest
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - $PWD/Caddyfile:/etc/caddy/Caddyfile
-      - $PWD/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - BUNNY_API_KEY=your_bunny_api_key
-
-volumes:
-  caddy_data:
-    external: true
-  caddy_config:
-```
-Defining the data volume as [external](https://docs.docker.com/compose/compose-file/compose-file-v3/#external) makes sure `docker-compose down` does not delete the volume. You may need to create it manually using `docker volume create caddy_data`.
-
-Replace `your_bunny_api_key` with your actual API key.
-
-### ACME DNS Challenge Configuration
-To configure the [ACME DNS challenge](https://caddyserver.com/docs/automatic-https#dns-challenge) provider for all ACME transactions, add the following to your Caddyfile:
 ```
 {
   acme_dns bunny {env.BUNNY_API_KEY}
 }
+
+example.com {
+    root * /usr/share/caddy
+    file_server
+    encode gzip
+}
+
+another-example.com {
+    reverse_proxy localhost:8080
+}
 ```
-This configuration sets up the provider to use the Bunny DNS module with the API key provided as an environment variable. It ensures that your Caddy server can automatically issue and renew SSL certificates using DNS-01 challenges via Bunny.
 
-This setup is the same as specifying the provider in the [tls directive's ACME issuer](https://caddyserver.com/docs/caddyfile/directives/tls#acme) configuration.
+#### Per-Site DNS Configuration
 
-[Sample Caddyfile](#sample-caddyfile)
+Configure the DNS challenge individually per site:
 
-#### Troubleshooting
+```
+example.com {
+    root * /usr/share/caddy
+    file_server
+    encode gzip
 
-> [!NOTE]
-> TODO: Haven't run into any issues yet to troubleshoot :)
+    tls {
+        dns bunny {env.BUNNY_API_KEY}
+    }
+}
+```
 
-[Official Bunny caddy-dns module repo for more information](https://github.com/caddy-dns/bunny)
+## Configuration
+
+### Getting a Bunny API Key
+
+Your Bunny.net account already has an API key. Retrieve it and pass it to Caddy:
+
+1. **Find your API key** in the Bunny.net dashboard under [Account settings](https://dash.bunny.net/account/settings). Bunny's [API key docs](https://docs.bunny.net/account/api-keys) explain the details.
+
+2. **Set the environment variable**:
+   - Add `BUNNY_API_KEY` to your deployment environment. See [Quick Start](#quick-start) for the docker-compose example.
+
+You can also put the key directly in the Caddyfile instead of `{env.BUNNY_API_KEY}`, but an environment variable keeps it out of your config files.
+
+### ACME DNS Challenge
+
+To configure the [ACME DNS challenge](https://caddyserver.com/docs/automatic-https#dns-challenge) provider for all ACME transactions, add the following to your Caddyfile:
+
+```
+{
+   acme_dns bunny {env.BUNNY_API_KEY}
+}
+```
+
+This is equivalent to specifying the provider in the [tls directive's ACME issuer](https://caddyserver.com/docs/caddyfile/directives/tls#acme) configuration. See [Caddyfile Examples](#caddyfile-examples) for full samples.
 
 ## Tags
 
-The [caddy-bunny](https://github.com/caddybuilds/caddy-bunny/pkgs/container/caddy-bunny) image on GitHub Container Registry and Docker Hub provides the following tags:
+The image is available on [GitHub Container Registry](https://github.com/caddybuilds/caddy-bunny/pkgs/container/caddy-bunny) and Docker Hub. There are two images, default and slim, each under a few tags:
 
-- **`latest`**: 
-  - Always points to the most recent stable release of Caddy with the Bunny DNS module.
-  - Automatically updated to ensure you have the latest features and improvements.
+| Tags | Image |
+|------|-------|
+| `latest`, `<version>`, `<major>.<minor>`, `<major>` | Default |
+| `alpine`, `<version>-alpine`, `<major>.<minor>-alpine`, `<major>-alpine` | Default (same image, see below) |
+| `slim`, `<version>-slim`, `<major>.<minor>-slim`, `<major>-slim` | Slim |
 
-- **`<version>`**:
-  - Specific version tags for precise version control and consistency in deployments.
-  - Examples include:
-    - **`2.7.6`**: Full version tag for Caddy version 2.7.6, ensuring you are using this exact release. 
-    
-         (eg: ```docker pull ghcr.io/caddybuilds/caddy-bunny:2.8.0``` )
-    - **`2.7`**: Minor version tag for the latest patch release within the 2.7 series, allowing for minor updates without breaking changes.
-    - **`2`**: Major version tag for the latest release within the 2.x series, providing updates within the major version while maintaining compatibility.
+`<version>` pins a release (e.g. `docker pull ghcr.io/caddybuilds/caddy-bunny:2.11.7`), `<major>.<minor>` follows the latest patch (e.g. `2.11`) and `<major>` the latest release (e.g. `2`). Slim tags exist from `2.11.7` onward.
 
-- **`alpine`** and **`<version>-alpine`**: Aliases of the tags above, kept for existing users. The official `caddy` Linux image is Alpine-based, so the default image and the `-alpine` tags are the same image.
+### Default or slim?
+
+Both run the same Caddy binary with the same modules. They differ only in the image underneath.
+
+| | Default | Slim |
+|---|---|---|
+| Built on | The official [Caddy image](https://hub.docker.com/_/caddy) | [caddy-base](https://github.com/CaddyBuilds/caddy-base#the-caddy-base-image): the official image without its Caddy binary |
+| Download size (amd64) | about 43 MB | about 24 MB |
+| Caddy binaries inside | Two: the stock one stays in a lower layer, ours replaces it on top | One: ours |
+| Rebuilt for base fixes when | The official Caddy image is republished | Alpine is republished (caddy-base rebuilds, then slim follows) |
+
+Everything else is the same: Alpine, packages, default Caddyfile, `/data` and `/config`, ports, command, platforms, and permission to bind ports 80 and 443 as a non-root user.
+
+Use **slim** for a smaller image. Use **default** if you want to stay on the Docker Official Image exactly as Caddy ships it.
+
+### Why `alpine` tags point to the same image
+
+This follows the official Caddy image. On Linux, `caddy:latest`, `caddy:2.11.7` and `caddy:2.11.7-alpine` are all the same Alpine image. The plain tags also include Windows builds, which is the only reason both exist. We only build Linux images, so the `-alpine` tags are aliases: a setup that uses `caddy:2.11.7-alpine` can switch to `caddy-bunny:2.11.7-alpine` without changing anything else.
+
+### Why did a digest change?
+
+Images are rebuilt without a new Caddy version when the module gets new commits or a base image is republished with OS or Go fixes (the official Caddy image for the default tags, caddy-base for `slim`). Each rebuild is logged under **Rebuilds** in that version's [GitHub Release](https://github.com/caddybuilds/caddy-bunny/releases), and the reason is stored in the image labels:
+
+```sh
+docker inspect --format '{{ index .Config.Labels "caddy-build.reason" }}: {{ index .Config.Labels "caddy-build.details" }}' ghcr.io/caddybuilds/caddy-bunny:latest
+```
 
 ## Platform Support
 
-The `caddybuilds/caddy-bunny` image is built to support multiple platforms, ensuring compatibility across a wide range of devices and systems. The supported platforms include:
+The image is built for the following platforms:
 
-- **linux/amd64**: Standard x86_64 architecture, commonly used in desktop and server environments.
-- **linux/arm64**: ARM 64-bit architecture, used in many modern servers and high-end ARM devices.
-- **linux/arm/v7**: ARM 32-bit architecture, widely used in devices like Raspberry Pi.
-- **linux/ppc64le**: 64-bit PowerPC Little Endian architecture.
-- **linux/s390x**: 64-bit IBM System z architecture.
+- **linux/amd64** -- Standard x86_64 (desktops, servers)
+- **linux/arm64** -- ARM 64-bit (modern ARM servers, Apple Silicon via emulation)
+- **linux/arm/v7** -- ARM 32-bit (Raspberry Pi 3+)
+- **linux/ppc64le** -- 64-bit PowerPC Little Endian
+- **linux/s390x** -- 64-bit IBM System z
 
 ### Alpine
 
-The image is based on the official `caddy` image, which is itself Alpine-based. The `alpine` and `<version>-alpine` tags are aliases of the default tags and resolve to the same digest.
+Both images are built on [Alpine Linux](https://alpinelinux.org/): the default through the official Caddy image, slim through caddy-base. Alpine uses musl libc instead of glibc, which may cause compatibility issues with some software. Additional tools (git, bash, etc.) are not included by default.
 
-### Raspberry Pi Support
+### Raspberry Pi
 
-This Docker image is optimized for Raspberry Pi, allowing you to deploy Caddy with Bunny DNS integration on these popular single-board computers. Whether you are using a Raspberry Pi 3 or the latest Raspberry Pi 4, this image provides the necessary support for seamless operation.
+The `linux/arm/v7` build supports Raspberry Pi 3 and later. No special configuration is needed beyond having Docker installed on a compatible OS (such as Raspberry Pi OS).
 
-To use the image on a Raspberry Pi, ensure you are running a compatible operating system (such as Raspberry Pi OS) and have Docker installed. You can then pull the image and run it as you would on any other system:
+## Troubleshooting
+
+### Debug Logging
+
+The Bunny module logs additional information when Caddy's global debug mode is on. Enable it while you investigate a failing challenge:
+
+```
+{
+  debug
+  acme_dns bunny {env.BUNNY_API_KEY}
+}
+```
+
+### Verifying Modules
+
+To confirm the Bunny module is loaded:
 
 ```sh
-docker pull ghcr.io/caddybuilds/caddy-bunny:latest
+docker run --rm ghcr.io/caddybuilds/caddy-bunny:latest caddy list-modules | grep dns.providers.bunny
 ```
-# How It Works
 
-The pipeline is shared with the other CaddyBuilds images through [caddy-base](https://github.com/CaddyBuilds/caddy-base):
+### Official Resources
 
-1. **Daily release check**: a scheduled workflow looks for new [Caddy releases](https://github.com/caddyserver/caddy/releases) and waits until the official image has every required platform.
-2. **Module update detection**: the latest commit of each module in the `Dockerfile` is tracked in `module-versions.json`; new commits trigger a rebuild.
-3. **Base image tracking**: if the official image is republished for base OS or Go fixes, the image is rebuilt on top of it.
-4. **Multi-platform build**: the image is built for all supported architectures and pushed to GitHub Container Registry and, optionally, Docker Hub. Each release lists why it was built or rebuilt.
-5. **Failure notifications**: a failed build opens a GitHub issue.
+- [caddy-dns/bunny](https://github.com/caddy-dns/bunny)
+- [Bunny.net API keys](https://docs.bunny.net/account/api-keys)
+- [Caddy ACME DNS challenge docs](https://caddyserver.com/docs/automatic-https#dns-challenge)
 
-# Building Your Own Docker Image
-If you prefer to build your own Docker image, follow these steps:
+## How It Works
 
-## Prerequisites
+The build pipeline is fully automated via GitHub Actions and shared with the other CaddyBuilds images through [caddy-base](https://github.com/CaddyBuilds/caddy-base). This repo holds only what is specific to this image: the `Dockerfile` (module list), `caddy-image.json` (title, description, verified module) and two thin workflows that call the shared ones.
+
+1. **Daily release check** -- A scheduled workflow queries the GitHub API for new [Caddy releases](https://github.com/caddyserver/caddy/releases) and verifies the official Docker image is available with all required platforms before triggering a build.
+
+2. **Module update detection** -- The pipeline reads the module list from the `Dockerfile` and tracks each module's latest commit SHA in `module-versions.json`. If any module has new commits, a rebuild is triggered even without a new Caddy release.
+
+3. **Base image tracking** -- Docker Official Images republish existing Caddy versions for base OS and Go toolchain fixes, and caddy-base is rebuilt when Alpine is republished. The check compares each base image with when ours was built, and rebuilds if the base is newer.
+
+4. **Multi-platform build** -- The shared workflow builds the default and slim images for all supported architectures. Images are pushed to GitHub Container Registry (primary) and optionally Docker Hub.
+
+5. **Fork-friendly** -- Image names are derived from the `GITHUB_REPOSITORY` environment variable, so forks produce correctly named images without any configuration changes.
+
+6. **Failure notifications** -- If a build fails, a GitHub issue is automatically created for visibility.
+
+## Building Your Own Image
+
+### Prerequisites
 
 - GitHub account
-- DockerHub account (if you wish to push the image to DockerHub as well)
+- Docker Hub account (optional, for pushing to Docker Hub)
 - GitHub Secrets configured:
   - `GITHUB_TOKEN` (automatically available in GitHub Actions)
-  - `DOCKERHUB_USERNAME` (optional, if you want to push to DockerHub)
-  - `DOCKERHUB_TOKEN` (optional, if you want to push to DockerHub)
-  - `DOCKERHUB_REPOSITORY_NAME` (optional, can be set as a repository secret or variable to customize the target DockerHub repository)
+  - `DOCKERHUB_USERNAME` (optional)
+  - `DOCKERHUB_TOKEN` (optional)
+  - `DOCKERHUB_REPOSITORY_NAME` (optional, to customize the Docker Hub repository name)
 
-
-## Setup Instructions
+### Setup Instructions
 
 1. **[Fork this repository](https://github.com/caddybuilds/caddy-bunny/fork)** to your GitHub account.
 
-2. **Set up GitHub Secrets**:
-   - Go to your repository on GitHub.
+2. **Set up GitHub Secrets** (optional, for Docker Hub):
    - Navigate to `Settings` > `Secrets and variables` > `Actions`.
-   - Add the following secrets:
-     - `GITHUB_TOKEN`: This is automatically available in GitHub Actions.
-     - `DOCKERHUB_USERNAME`: Your DockerHub username (optional).
-     - `DOCKERHUB_TOKEN`: Your DockerHub access token (optional).
-     - `DOCKERHUB_REPOSITORY_NAME` (optional, can be set as a repository secret or variable to customize the target DockerHub repository)
+   - Add `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and optionally `DOCKERHUB_REPOSITORY_NAME`.
 
-3. **Customize the image** (optional):
-   - Add or change modules in the `--with` lines of the `Dockerfile`. The daily check reads the module list from there.
-   - `caddy-image.json` holds the image title, description and the module ID verified after each build.
-   - The workflows in `.github/workflows/` call the shared [caddy-base](https://github.com/CaddyBuilds/caddy-base) workflows, which handle the release check, the multi-platform build, tagging and releases.
+3. **Enable GitHub Actions**:
+   - Go to the `Actions` tab. If prompted, click "I understand my workflows, go ahead and enable them".
 
-4. **Manually trigger the workflow** (optional):
-   - Go to the `Actions` tab in your GitHub repository.
-   - Select the `Build and Push Docker Image` workflow.
-   - Click the `Run workflow` button to trigger the build process manually.
+4. **Customize the modules** (optional):
+   - Add or change `--with` lines in the `Dockerfile`; the daily check follows the list from there. Adjust the title and description in `caddy-image.json` if you like.
 
-5. **Enable the workflow**:
-    - Make sure GitHub Actions is enabled for your repository. Go to the `Actions` tab and, if prompted, click "I understand my workflows, go ahead and enable them" to activate Actions for your fork.
+5. **Trigger a build** (optional):
+   - In the `Actions` tab, select `Build and Push Docker Image` and click `Run workflow`. The optional note is recorded in the release notes.
 
-6. **Monitor the workflow**:
-   - You can monitor the progress and logs of the workflow in the `Actions` tab of your GitHub repository.
+6. **Pull your image**:
+   ```sh
+   docker pull ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME:latest
+   ```
 
-7. **Docker image**:
-   - Once the workflow completes successfully, the Docker image will be available in the GitHub Container Registry under your repository.
-   - You can pull the image using:
-     ```sh
-     docker pull ghcr.io/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPOSITORY_NAME:latest
-     ```
-
-## Usage
-
-You can use the built Docker image in your projects. Here is an example of how to use it in a `docker-compose.yml` file:
-
-```yaml
-services:
-  caddy:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPOSITORY_NAME:latest
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - $PWD/Caddyfile:/etc/caddy/Caddyfile
-      - $PWD/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - BUNNY_API_KEY=your_bunny_api_key
-
-volumes:
-  caddy_data:
-    external: true
-  caddy_config:
-```
-Defining the data volume as [external](https://docs.docker.com/compose/compose-file/compose-file-v3/#external) makes sure `docker-compose down` does not delete the volume. You may need to create it manually using `docker volume create caddy_data`.
-
-Replace `YOUR_GITHUB_USERNAME` with your GitHub username and `your_bunny_api_key` with your actual Bunny API key.
+Use the image in your docker-compose setup as shown in the [Quick Start](#quick-start), replacing the image name with your own.
 
 ## Contributing
 
